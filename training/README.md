@@ -284,6 +284,49 @@ above script can then be run using DDP with no code changes.
 Training logs will be reported to TensorBoard and WandB, provided the relevant packages are available. An example of a 
 saved checkpoint pushed to the Hugging Face Hub can be found here: [sanchit-gandhi/distil-whisper-large-v2-hi](https://huggingface.co/sanchit-gandhi/distil-whisper-large-v2-hi).
 
+The script below load the local json file as the dataset, the directory datasets contains examples json files(train.json and dev.json)
+```bash
+#!/usr/bin/env bash
+
+accelerate launch run_distillation_local_datasets.py \
+  --model_name_or_path "./distil-large-v2-init" \
+  --teacher_model_name_or_path "openai/whisper-large-v2" \
+  --train_dataset_name "datasets/train.json" \
+  --train_dataset_config_name "zh" \
+  --train_split_name "train" \
+  --text_column_name "sentence" \
+  --train_dataset_samples "10" \
+  --eval_dataset_name "datasets/dev.json" \
+  --eval_dataset_config_name "zh" \
+  --eval_split_name "test" \
+  --eval_text_column_name "sentence" \
+  --eval_steps 1000 \
+  --save_steps 1000 \
+  --warmup_steps 50 \
+  --learning_rate 0.0001 \
+  --lr_scheduler_type "constant_with_warmup" \
+  --logging_steps 25 \
+  --save_total_limit 1 \
+  --max_steps 5000 \
+  --wer_threshold 10 \
+  --per_device_train_batch_size 64 \
+  --per_device_eval_batch_size 64 \
+  --dataloader_num_workers 16 \
+  --preprocessing_num_workers 16 \
+  --ddp_timeout 7200 \
+  --dtype "bfloat16" \
+  --output_dir "./" \
+  --do_train \
+  --do_eval \
+  --gradient_checkpointing \
+  --overwrite_output_dir \
+  --predict_with_generate \
+  --freeze_encoder \
+  --streaming False \
+  --push_to_hub
+
+```
+
 There are a few noteworthy arguments that can be configured to give optimal training performance:
 1. `train_dataset_samples`: defines the number of training samples in each dataset. Used to calculate the sampling probabilities in the dataloader. A good starting point is setting the samples to the number of hours of audio data in each split. A more refined strategy is setting it to the number of training samples in each split, however this might require downloading the dataset offline to compute these statistics.
 2. `wer_threshold`: sets the WER threshold between the normalised pseudo-labels and normalised ground truth labels. Any samples with WER > `wer_threshold` are discarded from the training data. This is beneficial to avoid training the student model on pseudo-labels where Whisper hallucinated or got the predictions grossly wrong.
