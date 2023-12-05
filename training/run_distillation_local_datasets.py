@@ -568,7 +568,7 @@ def load_multiple_datasets(
 
     if len(dataset_names_dict) == 1:
         dataset_dict = dataset_names_dict[0]
-        # we have a single dataset so just return it as is # load local json file by shuaijiang
+        # we have a single dataset so just return it as is # load local json file
         return load_dataset(
             'json',
             data_files={dataset_dict["split"]: dataset_dict["name"]},
@@ -856,7 +856,6 @@ def main():
                     raw_datasets[pretty_name] = raw_datasets[pretty_name].rename_column(
                         dataset_dict["text_column_name"], "text"
                     )
-                # by shuaijiang
                 #raw_datasets[pretty_name] = raw_datasets[pretty_name].remove_columns(
                 #    set(raw_datasets[pretty_name].features.keys()) - {"audio", "text"}
                 #)
@@ -957,7 +956,7 @@ def main():
         config.save_pretrained(training_args.output_dir)
         student_model.generation_config.save_pretrained(training_args.output_dir)
     accelerator.wait_for_everyone()
-    processor = WhisperProcessor.from_pretrained(model_args.model_name_or_path) # modify by shuaijiang
+    processor = WhisperProcessor.from_pretrained(model_args.model_name_or_path)
 
     # 9. Resample speech dataset: `datasets` takes care of automatically loading and resampling the audio,
     # so we just need to set the correct target sampling rate.
@@ -1066,10 +1065,6 @@ def main():
         TODO(SG): see whether we can 'pack' the audio inputs closer to 30 second chunks
         """
         # load and process audio input
-        #print(batch)
-        #print(type(batch))
-        #print(type(batch['audio']['path']))
-        #samples = [librosa.load(path, sr=16000)[0] for path in batch["audio"]['path']]
         audio = [sample["array"] for sample in batch["audio"]] # where is the array from?
         inputs = feature_extractor(audio, sampling_rate=sampling_rate)
         batch["input_features"] = inputs.input_features
@@ -1138,10 +1133,6 @@ def main():
 
     def prepare_eval_dataset(batch):
         # process audio input
-        # sample = librosa.load(batch["audio"]['path'], sr=16000)
-        # inputs = feature_extractor(sample, sampling_rate=16000)
-        # batch["input_features"] = inputs.input_features[0] # why index=0， batch_size==1?
-        # batch["input_length"] = len(sample)
         sample = batch["audio"]
         inputs = feature_extractor(sample["array"], sampling_rate=sample["sampling_rate"])
         batch["input_features"] = inputs.input_features[0]
@@ -1205,7 +1196,7 @@ def main():
         if not data_args.streaming
         else filter_by_labels_fn()
     )
-    accelerator.wait_for_everyone() # by shuaijiang
+    accelerator.wait_for_everyone()
     # Pre-processing complete!
     # For large datasets it is advised to run the preprocessing on a
     # single machine first with `--preprocessing_only` since there will mostly likely
@@ -1492,7 +1483,7 @@ def main():
             train_dataloader = accelerator.skip_first_batches(train_dataloader, resume_step)
             resume_step = None
         for batch in train_dataloader:
-            batch.to(accelerator.device) # by shuaijiang
+            batch.to(accelerator.device)
             with accelerator.accumulate(student_model):
                 loss, train_metric = train_step(batch, temperature=training_args.temperature)
                 accelerator.backward(loss)
